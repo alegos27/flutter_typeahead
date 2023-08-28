@@ -6,6 +6,9 @@ import 'package:flutter_typeahead/src/cupertino/suggestions_box/cupertino_sugges
 import 'package:flutter_typeahead/src/cupertino/suggestions_box/cupertino_suggestions_box_decoration.dart';
 import 'package:flutter_typeahead/src/typedef.dart';
 
+/// Renders all the suggestions using a ListView as default.  If
+/// `layoutArchitecture` is specified, uses that instead.
+
 class CupertinoSuggestionsList<T> extends StatefulWidget {
   final CupertinoSuggestionsBox? suggestionsBox;
   final TextEditingController? controller;
@@ -13,6 +16,9 @@ class CupertinoSuggestionsList<T> extends StatefulWidget {
   final SuggestionSelectionCallback<T>? onSuggestionSelected;
   final SuggestionsCallback<T>? suggestionsCallback;
   final ItemBuilder<T>? itemBuilder;
+  final IndexedWidgetBuilder? itemSeparatorBuilder;
+  final LayoutArchitecture? layoutArchitecture;
+  final ScrollController? scrollController;
   final CupertinoSuggestionsBoxDecoration? decoration;
   final Duration? debounceDuration;
   final WidgetBuilder? loadingBuilder;
@@ -36,6 +42,9 @@ class CupertinoSuggestionsList<T> extends StatefulWidget {
     this.onSuggestionSelected,
     this.suggestionsCallback,
     this.itemBuilder,
+    this.itemSeparatorBuilder,
+    this.layoutArchitecture,
+    this.scrollController,
     this.decoration,
     this.debounceDuration,
     this.loadingBuilder,
@@ -54,10 +63,12 @@ class CupertinoSuggestionsList<T> extends StatefulWidget {
   });
 
   @override
-  _CupertinoSuggestionsListState<T> createState() => _CupertinoSuggestionsListState<T>();
+  _CupertinoSuggestionsListState<T> createState() =>
+      _CupertinoSuggestionsListState<T>();
 }
 
-class _CupertinoSuggestionsListState<T> extends State<CupertinoSuggestionsList<T>>
+class _CupertinoSuggestionsListState<T>
+    extends State<CupertinoSuggestionsList<T>>
     with SingleTickerProviderStateMixin {
   Iterable<T>? _suggestions;
   late bool _suggestionsValid;
@@ -67,6 +78,8 @@ class _CupertinoSuggestionsListState<T> extends State<CupertinoSuggestionsList<T
   Object? _error;
   AnimationController? _animationController;
   String? _lastTextValue;
+  late final ScrollController _scrollController =
+      widget.scrollController ?? ScrollController();
 
   @override
   void didUpdateWidget(CupertinoSuggestionsList<T> oldWidget) {
@@ -157,7 +170,7 @@ class _CupertinoSuggestionsListState<T> extends State<CupertinoSuggestionsList<T
 
       try {
         suggestions =
-        await widget.suggestionsCallback!(widget.controller!.text);
+            await widget.suggestionsCallback!(widget.controller!.text);
       } catch (e) {
         error = e;
       }
@@ -219,12 +232,12 @@ class _CupertinoSuggestionsListState<T> extends State<CupertinoSuggestionsList<T
     var animationChild = widget.transitionBuilder != null
         ? widget.transitionBuilder!(context, child, this._animationController)
         : SizeTransition(
-      axisAlignment: -1.0,
-      sizeFactor: CurvedAnimation(
-          parent: this._animationController!,
-          curve: Curves.fastOutSlowIn),
-      child: child,
-    );
+            axisAlignment: -1.0,
+            sizeFactor: CurvedAnimation(
+                parent: this._animationController!,
+                curve: Curves.fastOutSlowIn),
+            child: child,
+          );
 
     BoxConstraints constraints;
     if (widget.decoration!.constraints == null) {
@@ -259,21 +272,21 @@ class _CupertinoSuggestionsListState<T> extends State<CupertinoSuggestionsList<T
       child = widget.loadingBuilder != null
           ? widget.loadingBuilder!(context)
           : Container(
-        decoration: BoxDecoration(
-          color: CupertinoColors.white,
-          border: Border.all(
-            color: CupertinoColors.extraLightBackgroundGray,
-            width: 1.0,
-          ),
-        ),
-        child: Align(
-          alignment: Alignment.center,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8.0),
-            child: CupertinoActivityIndicator(),
-          ),
-        ),
-      );
+              decoration: BoxDecoration(
+                color: CupertinoColors.white,
+                border: Border.all(
+                  color: CupertinoColors.extraLightBackgroundGray,
+                  width: 1.0,
+                ),
+              ),
+              child: Align(
+                alignment: Alignment.center,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: CupertinoActivityIndicator(),
+                ),
+              ),
+            );
     }
 
     return child;
@@ -283,53 +296,61 @@ class _CupertinoSuggestionsListState<T> extends State<CupertinoSuggestionsList<T
     return widget.errorBuilder != null
         ? widget.errorBuilder!(context, this._error)
         : Container(
-      decoration: BoxDecoration(
-        color: CupertinoColors.white,
-        border: Border.all(
-          color: CupertinoColors.extraLightBackgroundGray,
-          width: 1.0,
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(4.0),
-        child: Text(
-          'Error: ${this._error}',
-          textAlign: TextAlign.start,
-          style: TextStyle(
-            color: CupertinoColors.destructiveRed,
-            fontSize: 18.0,
-          ),
-        ),
-      ),
-    );
+            decoration: BoxDecoration(
+              color: CupertinoColors.white,
+              border: Border.all(
+                color: CupertinoColors.extraLightBackgroundGray,
+                width: 1.0,
+              ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(4.0),
+              child: Text(
+                'Error: ${this._error}',
+                textAlign: TextAlign.start,
+                style: TextStyle(
+                  color: CupertinoColors.destructiveRed,
+                  fontSize: 18.0,
+                ),
+              ),
+            ),
+          );
   }
 
   Widget createNoItemsFoundWidget() {
     return widget.noItemsFoundBuilder != null
         ? widget.noItemsFoundBuilder!(context)
         : Container(
-      decoration: BoxDecoration(
-        color: CupertinoColors.white,
-        border: Border.all(
-          color: CupertinoColors.extraLightBackgroundGray,
-          width: 1.0,
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(4.0),
-        child: Text(
-          'No Items Found!',
-          textAlign: TextAlign.start,
-          style: TextStyle(
-            color: CupertinoColors.inactiveGray,
-            fontSize: 18.0,
-          ),
-        ),
-      ),
-    );
+            decoration: BoxDecoration(
+              color: CupertinoColors.white,
+              border: Border.all(
+                color: CupertinoColors.extraLightBackgroundGray,
+                width: 1.0,
+              ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(4.0),
+              child: Text(
+                'No Items Found!',
+                textAlign: TextAlign.start,
+                style: TextStyle(
+                  color: CupertinoColors.inactiveGray,
+                  fontSize: 18.0,
+                ),
+              ),
+            ),
+          );
   }
 
   Widget createSuggestionsWidget() {
+    if (widget.layoutArchitecture == null) {
+      return defaultSuggestionsWidget();
+    } else {
+      return customSuggestionsWidget();
+    }
+  }
+
+  Widget defaultSuggestionsWidget() {
     Widget child = Container(
       decoration: BoxDecoration(
         color: widget.decoration!.color != null
@@ -338,14 +359,14 @@ class _CupertinoSuggestionsListState<T> extends State<CupertinoSuggestionsList<T
         border: widget.decoration!.border != null
             ? widget.decoration!.border
             : Border.all(
-          color: CupertinoColors.extraLightBackgroundGray,
-          width: 1.0,
-        ),
+                color: CupertinoColors.extraLightBackgroundGray,
+                width: 1.0,
+              ),
         borderRadius: widget.decoration!.borderRadius != null
             ? widget.decoration!.borderRadius
             : null,
       ),
-      child: ListView(
+      child: ListView.separated(
         padding: EdgeInsets.zero,
         primary: false,
         shrinkWrap: true,
@@ -355,7 +376,53 @@ class _CupertinoSuggestionsListState<T> extends State<CupertinoSuggestionsList<T
         reverse: widget.suggestionsBox!.direction == AxisDirection.down
             ? false
             : widget.suggestionsBox!.autoFlipListDirection,
-        children: this._suggestions!.map((T suggestion) {
+        itemCount: this._suggestions!.length,
+        itemBuilder: (BuildContext context, int index) {
+          return GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            child: widget.itemBuilder!(
+                context, this._suggestions!.elementAt(index)),
+            onTap: () {
+              widget.onSuggestionSelected!(this._suggestions!.elementAt(index));
+            },
+          );
+        },
+        separatorBuilder: (BuildContext context, int index) =>
+            widget.itemSeparatorBuilder?.call(context, index) ??
+            const SizedBox.shrink(),
+      ),
+    );
+
+    if (widget.decoration!.hasScrollbar) {
+      child = MediaQuery.removePadding(
+          context: context,
+          removeTop: true,
+          child: CupertinoScrollbar(child: child));
+    }
+
+    return child;
+  }
+
+  Widget customSuggestionsWidget() {
+    Widget child = Container(
+      decoration: BoxDecoration(
+        color: widget.decoration!.color != null
+            ? widget.decoration!.color
+            : CupertinoColors.white,
+        border: widget.decoration!.border != null
+            ? widget.decoration!.border
+            : Border.all(
+                color: CupertinoColors.extraLightBackgroundGray,
+                width: 1.0,
+              ),
+        borderRadius: widget.decoration!.borderRadius != null
+            ? widget.decoration!.borderRadius
+            : null,
+      ),
+      child: widget.layoutArchitecture!(
+        List.generate(this._suggestions!.length, (index) {
+          final suggestion = _suggestions!.elementAt(index);
+
           return GestureDetector(
             behavior: HitTestBehavior.translucent,
             child: widget.itemBuilder!(context, suggestion),
@@ -363,12 +430,16 @@ class _CupertinoSuggestionsListState<T> extends State<CupertinoSuggestionsList<T
               widget.onSuggestionSelected!(suggestion);
             },
           );
-        }).toList(),
+        }),
+        _scrollController,
       ),
     );
 
     if (widget.decoration!.hasScrollbar) {
-      child = CupertinoScrollbar(child: child);
+      child = MediaQuery.removePadding(
+          context: context,
+          removeTop: true,
+          child: CupertinoScrollbar(child: child));
     }
 
     return child;
